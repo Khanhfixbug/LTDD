@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "155696207509",
+    "project_id": "qlchitieu-9cf13",
+    "storage_bucket": "qlchitieu-9cf13.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:155696207509:android:6ed45e94850ddff9476d9c",
+        "android_client_info": {
+          "package_name": "com.example.screensetting"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDksrL7suPiioDYn_UHTErgNb179C9Vf70"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

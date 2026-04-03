@@ -1,16 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:screensetting/screensettings.dart';
-void main() {
-  runApp(const MyApp());
+import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart'; 
+import 'filebase/firebase_options.dart'; 
+import 'SETTING/app_language.dart';
+import 'TrangChu.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); 
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => AppLanguage(),
+      child: const MyApp(),
+    ),
+  );
 }
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: SettingsScreen(),
+    final appLang = context.watch<AppLanguage>();
+
+    return MaterialApp(
+      debugShowCheckedModeBanner: false, 
+      locale: appLang.locale, 
+      home: const TrangChu(),
     );
   }
 }
