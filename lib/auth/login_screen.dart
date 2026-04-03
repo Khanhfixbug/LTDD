@@ -85,6 +85,41 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+
+
+
+//tao tai khoan test: 0912345678 - 123456
+  Future<void> _seedTestAccount() async {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      await _loginRepository.seedTestAccount();
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã tạo tài khoản test: 0912345678 / 123456')),
+      );
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể tạo tài khoản test.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
+//===============================================================================
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -227,6 +262,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: _isSubmitting ? null : _seedTestAccount,
+                        child: const Text('Tạo tài khoản test'),
                       ),
                     ],
                   ),

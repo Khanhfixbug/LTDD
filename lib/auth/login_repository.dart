@@ -61,4 +61,22 @@ class LoginRepository {
   String _normalizePhone(String value) {
     return value.replaceAll(RegExp(r'\D'), '');
   }
+
+
+
+  
+//test account: 0912345678 - 123456 -
+  Future<void> seedTestAccount({
+    String phone = '0912345678',
+    String password = '123456',
+    String email = 'test1@gmail.com',
+  }) async {
+    final normalizedPhone = _normalizePhone(phone);
+
+    await _firestore.collection('login_accounts').doc(normalizedPhone).set({
+      'phone': normalizedPhone,
+      'password': password,
+      'email': email,
+    });
+  }
 }
