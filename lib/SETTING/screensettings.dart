@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import '../auth/login_screen.dart';
 import 'app_language.dart';
 import 'profile_screen.dart';
 import 'change_password_screen.dart';
@@ -35,50 +35,28 @@ class SettingsScreen extends StatelessWidget {
               child: Column(
                 children: [
                   SizedBox(height: height * 0.02),
-
-                  // 🔥 REALTIME USER INFO
-                  StreamBuilder<User?>(
-                    stream: FirebaseAuth.instance.userChanges(),
-                    builder: (context, snapshot) {
-                      final user = snapshot.data;
-
-                      return Column(
-                        children: [
-                          CircleAvatar(
-                            radius: isTablet ? 60 : width * 0.12,
-                            backgroundColor: Colors.blue.shade100,
-                            child: Icon(Icons.person,
-                                size: isTablet ? 60 : 40,
-                                color: Colors.blue),
-                          ),
-
-                          const SizedBox(height: 10),
-
-                          Text(
-                            user?.displayName ?? "Chưa có tên",
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-
-                          Text(
-                            user?.email ?? "Chưa có email",
-                            style:
-                                TextStyle(color: Colors.grey[600]),
-                          ),
-                        ],
-                      );
-                    },
+                  CircleAvatar(
+                    radius: isTablet ? 60 : width * 0.12,
+                    backgroundColor: Colors.blue.shade100,
+                    child: Icon(Icons.person, size: isTablet ? 60 : 40, color: Colors.blue),
                   ),
-
+                  const SizedBox(height: 10),
+                  const Text(
+                    "khanh",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  Text(
+                    "duykhanhnguyen30082005@gmail.com",
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
                   SizedBox(height: height * 0.02),
-
                   Expanded(
                     child: Container(
-                      margin:
-                          EdgeInsets.symmetric(horizontal: width * 0.05),
+                      margin: EdgeInsets.symmetric(horizontal: width * 0.05),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -88,20 +66,17 @@ class SettingsScreen extends StatelessWidget {
                         children: [
                           SettingItem(
                             icon: Icons.person_outline,
-                            title:
-                                appLanguage.t("Thông tin cá nhân"),
+                            title: appLanguage.t("Thông tin cá nhân"),
                             page: const ProfileScreen(),
                           ),
                           SettingItem(
                             icon: Icons.lock_outline,
-                            title:
-                                appLanguage.t("Đổi mật khẩu"),
+                            title: appLanguage.t("Đổi mật khẩu"),
                             page: const ChangePasswordScreen(),
                           ),
                           SettingItem(
                             icon: Icons.folder_outlined,
-                            title:
-                                appLanguage.t("Nhóm lưu trữ"),
+                            title: appLanguage.t("Nhóm lưu trữ"),
                             page: const ArchiveScreen(),
                           ),
                           SettingItem(
@@ -111,22 +86,18 @@ class SettingsScreen extends StatelessWidget {
                           ),
                           SettingItem(
                             icon: Icons.account_balance_wallet_outlined,
-                            title:
-                                appLanguage.t("Đơn vị tiền tệ"),
+                            title: appLanguage.t("Đơn vị tiền tệ"),
                             page: const CurrencyScreen(),
                           ),
                           SettingItem(
                             icon: Icons.info_outline,
-                            title: appLanguage.t(
-                                "Thông tin về chúng tôi"),
+                            title: appLanguage.t("Thông tin về chúng tôi"),
                             page: const AboutScreen(),
                           ),
                         ],
                       ),
                     ),
                   ),
-
-                  // 🔥 LOGOUT
                   Padding(
                     padding: EdgeInsets.all(width * 0.05),
                     child: SizedBox(
@@ -136,17 +107,20 @@ class SettingsScreen extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(15),
                           ),
                         ),
-                        onPressed: () async {
-                          await FirebaseAuth.instance.signOut();
+                        onPressed: () {
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
                         },
                         child: Text(
                           appLanguage.t("Đăng xuất"),
-                          style:
-                              const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ),
                     ),
@@ -161,7 +135,6 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-// ================= ITEM =================
 class SettingItem extends StatelessWidget {
   final IconData icon;
   final String title;
