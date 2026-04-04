@@ -71,12 +71,27 @@ class LoginRepository {
     String password = '123456',
     String email = 'test1@gmail.com',
   }) async {
-    final normalizedPhone = _normalizePhone(phone);
+    final normalizedPhone = normalizePhoneInput(phone);
+    if (normalizedPhone.isEmpty) {
+      return CreateAccountResult.phoneAlreadyExists;
+    }
 
-    await _firestore.collection('login_accounts').doc(normalizedPhone).set({
+    final accountRef = _firestore.collection('login_accounts').doc(
+          normalizedPhone,
+        );
+    final existingAccount = await accountRef.get();
+
+    if (existingAccount.exists) {
+      return CreateAccountResult.phoneAlreadyExists;
+    }
+
+    await accountRef.set({
       'phone': normalizedPhone,
       'password': password,
-      'email': email,
+      'email': email.trim(),
+      'fullName': fullName.trim(),
+      'avatarBase64': (avatarBase64 ?? '').trim(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 }
