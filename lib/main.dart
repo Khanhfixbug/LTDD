@@ -1,12 +1,12 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart'; 
-import 'filebase/firebase_options.dart'; 
 import 'SETTING/app_language.dart';
-import 'TrangChu.dart';
+import 'auth/login_screen.dart';
+import 'filebase/firebase_options.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized(); 
+  WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -28,9 +28,9 @@ class MyApp extends StatelessWidget {
     final appLang = context.watch<AppLanguage>();
 
     return MaterialApp(
-      debugShowCheckedModeBanner: false, 
-      locale: appLang.locale, 
-      home: const TrangChu(),
+      debugShowCheckedModeBanner: false,
+      locale: appLang.locale,
+      home: const LoginScreen(),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ChiTietNhom.dart';
-import 'create_group_sheet.dart';
+import 'CREATE_JOIN_GROUP/create_group_sheet.dart';
 import 'SETTING/screensettings.dart';
 import 'package:provider/provider.dart';
 import 'SETTING/app_language.dart';
