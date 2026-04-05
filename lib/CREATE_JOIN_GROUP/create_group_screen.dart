@@ -30,16 +30,23 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
   bool get _isCustomType => _selectedGroupType == 'Khác';
 
+  // Lấy giá trị thực tế để gửi lên Firebase (Dạng gốc chưa dịch)
   String get _resolvedGroupType {
-    if (_selectedGroupType == null) {
-      return '';
-    }
-    if (_selectedGroupType != 'Khác') {
-      return _selectedGroupType!;
-    }
+    if (_selectedGroupType == null) return '';
+    if (_selectedGroupType != 'Khác') return _selectedGroupType!;
 
     final customValue = _customGroupTypeController.text.trim();
     return customValue.isEmpty ? 'Khác' : customValue;
+  }
+
+  // Hàm helper để hiển thị text đã dịch trên UI
+  String _getDisplayText(AppLanguage appLang) {
+    if (_selectedGroupType == null) return appLang.t('Chọn loại nhóm');
+    if (_selectedGroupType == 'Khác') {
+      final customValue = _customGroupTypeController.text.trim();
+      return customValue.isEmpty ? appLang.t('Khác') : customValue;
+    }
+    return appLang.t(_selectedGroupType!);
   }
 
   bool get _isValidForm =>
@@ -77,7 +84,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       decoration: InputDecoration(
                         hintText: appLang.t('Nhập tên nhóm'),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
+borderRadius: BorderRadius.circular(10),
                         ),
                       ),
                     ),
@@ -91,7 +98,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     ),
                     const SizedBox(height: 8),
                     InkWell(
-                      onTap: _showGroupTypeSheet,
+                      onTap: () => _showGroupTypeSheet(appLang),
                       borderRadius: BorderRadius.circular(10),
                       child: InputDecorator(
                         decoration: InputDecoration(
@@ -103,9 +110,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                _selectedGroupType == null
-                                    ? appLang.t('Chọn loại nhóm')
-                                    : _resolvedGroupType,
+                                _getDisplayText(appLang),
                                 style: TextStyle(
                                   color: _selectedGroupType == null
                                       ? Colors.grey.shade600
@@ -125,8 +130,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
                           hintText: appLang.t('Nhập loại nhóm'),
-                          helperText:
-                              appLang.t('(Tùy chọn)'),
+                          helperText: appLang.t('(Tùy chọn)'),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
@@ -147,7 +151,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       maxLines: 4,
                       decoration: InputDecoration(
                         hintText: appLang.t('Nhập mô tả cho nhóm (tùy chọn)'),
-                        border: OutlineInputBorder(
+border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
@@ -193,7 +197,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     );
   }
 
-  Future<void> _showGroupTypeSheet() async {
+  Future<void> _showGroupTypeSheet(AppLanguage appLang) async {
     final selectedType = await showModalBottomSheet<String>(
       context: context,
       builder: (context) => SafeArea(
@@ -204,7 +208,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           itemBuilder: (context, index) {
             final groupType = _groupTypes[index];
             return ListTile(
-              title: Text(groupType),
+              title: Text(appLang.t(groupType)), // Dịch text trong danh sách
               onTap: () => Navigator.pop(context, groupType),
             );
           },
@@ -212,9 +216,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       ),
     );
 
-    if (!mounted || selectedType == null) {
-      return;
-    }
+    if (!mounted || selectedType == null) return;
 
     setState(() {
       _selectedGroupType = selectedType;
