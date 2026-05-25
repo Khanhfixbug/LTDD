@@ -1,0 +1,97 @@
+{
+  "Chào buổi sáng,": "Chào buổi sáng,",
+  "Nhóm của tôi": "Nhóm của tôi",
+  "Bạn nhận được": "Bạn nhận được",
+  "Bạn cần trả": "Bạn cần trả",
+  "Số dư": "Số dư",
+  "thành viên": "thành viên",
+  "Gần nhất 16 ngày trước": "Gần nhất 16 ngày trước",
+
+  "Tạo nhóm hoặc tham gia nhóm": "Tạo nhóm hoặc tham gia nhóm",
+  "Tạo nhóm mới": "Tạo nhóm mới",
+  "Lập nhóm để quản lý chi tiêu hiệu quả.": "Lập nhóm để quản lý chi tiêu hiệu quả.",
+  "Tham gia bằng mã nhóm": "Tham gia bằng mã nhóm",
+  "Kết nối với nhóm hiện có bằng cách nhập mã.": "Kết nối với nhóm hiện có bằng cách nhập mã.",
+  "Tham gia bằng mã QR": "Tham gia bằng mã QR",
+  "Quét mã QR để tham gia nhóm.": "Quét mã QR để tham gia nhóm.",
+
+  "Cài đặt": "Cài đặt",
+  "Ngôn ngữ": "Ngôn ngữ",
+  "Đăng xuất": "Đăng xuất",
+
+  "Thông tin cá nhân": "Thông tin cá nhân",
+  "Tên hiển thị": "Tên hiển thị",
+  "Email": "Email",
+  "Cập nhật": "Cập nhật",
+  "Cập nhật thành công!": "Cập nhật thành công!",
+  "Chưa có tên": "Chưa có tên",
+  "Chưa có email": "Chưa có email",
+
+  "Đổi mật khẩu": "Đổi mật khẩu",
+  "Mật khẩu hiện tại": "Mật khẩu hiện tại",
+  "Mật khẩu mới": "Mật khẩu mới",
+  "Xác nhận mật khẩu": "Xác nhận mật khẩu",
+  "Nhập mật khẩu": "Nhập mật khẩu",
+  "Nhập mật khẩu mới": "Nhập mật khẩu mới",
+  "Xác nhận mật khẩu mới": "Xác nhận mật khẩu mới",
+  "Đổi mật khẩu thành công": "Đổi mật khẩu thành công",
+
+  "Nhóm lưu trữ": "Nhóm lưu trữ",
+  "Thông tin về chúng tôi": "Thông tin về chúng tôi",
+
+  "Đơn vị tiền tệ": "Đơn vị tiền tệ",
+  "Chọn đơn vị tiền tệ": "Chọn đơn vị tiền tệ",
+
+  "Thêm chi tiêu": "Thêm chi tiêu",
+  "Tên chi tiêu": "Tên chi tiêu",
+  "Nhập tên chi tiêu": "Nhập tên chi tiêu",
+  "Số tiền": "Số tiền",
+  "Nhập số tiền": "Nhập số tiền",
+  "Người chi tiền": "Người chi tiền",
+  "Người được chi tiền": "Người được chi tiền",
+  "Chọn người được chi tiền": "Chọn người được chi tiền",
+  "Ngày": "Ngày",
+  "Mô tả": "Mô tả",
+  "Nhập ghi chú (Tùy chọn)": "Nhập ghi chú (Tùy chọn)",
+  "Ảnh": "Ảnh",
+
+  "Tổng chi của nhóm": "Tổng chi của nhóm",
+  "Tổng chi của tôi": "Tổng chi của tôi",
+
+  "Thêm thanh toán": "Thêm thanh toán",
+  "Gợi ý": "Gợi ý",
+  "Thêm bạn": "Thêm bạn",
+
+  "Dư nợ": "Dư nợ",
+  "Hoạt động": "Hoạt động",
+
+  "Trưởng nhóm": "Trưởng nhóm",
+  "Thành viên": "Thành viên",
+
+  "Trả tiền cho": "Trả tiền cho",
+  "Tùy chỉnh": "Tùy chỉnh",
+  "Chỉnh sửa": "Chỉnh sửa",
+  "Lưu trữ": "Lưu trữ",
+  "Chia sẻ": "Chia sẻ",
+
+  "Từ": "Từ",
+  "Trả bởi": "Trả bởi",
+  "Giao dịch gần nhất": "Giao dịch gần nhất",
+
+  "Đăng nhập": "Đăng nhập",
+  "Đăng ký": "Đăng ký",
+  "Bạn chưa có tài khoản?": "Bạn chưa có tài khoản?",
+  "Bạn đã có tài khoản?": "Bạn đã có tài khoản?",
+  "Quên mật khẩu": "Quên mật khẩu?",
+  "Nhập email": "Nhập email",
+  "Đăng nhập thành công": "Đăng nhập thành công",
+  "Đăng ký thành công": "Đăng ký thành công",
+  "Đăng xuất thành công": "Đăng xuất thành công",
+
+  "Lỗi": "Lỗi",
+  "Thành công": "Thành công",
+  "Vui lòng nhập đầy đủ thông tin": "Vui lòng nhập đầy đủ thông tin",
+  "Email không hợp lệ": "Email không hợp lệ",
+  "Mật khẩu quá yếu": "Mật khẩu quá yếu",
+  "Mật khẩu không khớp": "Mật khẩu không khớp"
+}
