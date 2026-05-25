@@ -4,10 +4,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
-  FirebaseService._internal();
 
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  FirebaseService._internal() {
+    // Ép cấu hình chạy kết nối an toàn cho môi trường Web ngay khi khởi tạo Service
+    _db.settings = const Settings(persistenceEnabled: true);
+  }
+
 
   Stream<List<Map<String, dynamic>>> getMembers(String groupId) {
     return _db
@@ -32,33 +37,74 @@ class FirebaseService {
         });
   }
 
+  // 1. SỬA HÀM addExpense: Nhận Map người chi và List người hưởng
   Future<void> addExpense({
     required String groupId,
     required String tenChiTieu,
-    required double soTien,
-    required String nguoiChi,
-    required String nguoiHuong,
-    required String nguoiChiId,
-    required String nguoiHuongId,
+    required Map<String, double> payers,
+    required List<String> nguoiHuongIds,
     String? ghiChu,
     DateTime? ngayTao,
     String? attachmentBase64,
   }) async {
-    await _createActivity(
-      groupId: groupId,
-      type: 'expense',
-      tenChiTieu: tenChiTieu,
-      soTien: soTien,
-      nguoiChi: nguoiChi,
-      nguoiHuong: nguoiHuong,
-      nguoiChiId: nguoiChiId,
-      nguoiHuongId: nguoiHuongId,
-      ghiChu: ghiChu,
-      ngayTao: ngayTao,
-      attachmentBase64: attachmentBase64,
-    );
+    // 1. Tính tổng số tiền từ Map payers gửi lên
+    double totalAmount = payers.values.fold(0.0, (sum, item) => sum + item);
+    if (totalAmount <= 0) throw Exception("Tổng số tiền phải lớn hơn 0");
+
+    final int totalReceivers = nguoiHuongIds.isEmpty ? 1 : nguoiHuongIds.length;
+    final double shareAmount = totalAmount / totalReceivers;
+
+    // 2. Tạo một WriteBatch để gom các lệnh ghi dữ liệu
+    final WriteBatch batch = _db.batch();
+    final groupRef = _db.collection('groups').doc(groupId);
+
+    // --- BƯỚC A: CẬP NHẬT SỐ DƯ CHO NHỮNG NGƯỜI CHI TIỀN ---
+    for (var entry in payers.entries) {
+      if (entry.value <= 0) continue;
+      final pRef = groupRef.collection('members').doc(entry.key);
+
+      // Sử her dụng FieldValue.increment để Firebase tự động cộng dồn trên Cloud,
+      // Không cần phải đọc dữ liệu về trước => Loại bỏ hoàn toàn lỗi bất đồng bộ!
+      batch.update(pRef, {
+        'balance': FieldValue.increment(entry.value),
+      });
+    }
+
+    // --- BƯỚC B: CẬP NHẬT SỐ DƯ CHO NHỮNG NGƯỜI HƯỞNG TIỀN ---
+    for (String rId in nguoiHuongIds) {
+      if (rId.trim().isEmpty) continue;
+      final rRef = groupRef.collection('members').doc(rId.trim());
+
+      batch.update(rRef, {
+        'balance': FieldValue.increment(-shareAmount),
+      });
+    }
+
+    // --- BƯỚC C: TẠO BẢN GHI LỊCH SỬ HOẠT ĐỘNG ---
+    final activityRef = _db.collection('expenses').doc();
+
+    // Ép kiểu Map tường minh tránh lỗi định dạng JSON trên Web
+    final Map<String, dynamic> firestorePayers = {};
+    payers.forEach((k, v) => firestorePayers[k] = v);
+
+    batch.set(activityRef, {
+      'groupId': groupId,
+      'type': 'expense',
+      'tenChiTieu': tenChiTieu.trim(),
+      'soTien': totalAmount,
+      'payers': firestorePayers,
+      'nguoiHuongIds': nguoiHuongIds,
+      'ghiChu': (ghiChu ?? '').trim(),
+      'attachmentBase64': (attachmentBase64 ?? '').trim(),
+      'ngayTao': ngayTao == null ? FieldValue.serverTimestamp() : Timestamp.fromDate(ngayTao),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    // 3. Thực thi đồng loạt tất cả các lệnh trên Cloud
+    await batch.commit();
   }
 
+  // 2. GIỮ NGUYÊN HÀM addPayment: Tạo một Map giả lập 1 người chi để tái sử dụng hàm _createActivity mới
   Future<void> addPayment({
     required String groupId,
     required double soTien,
@@ -79,12 +125,15 @@ class FirebaseService {
       nguoiHuong: nguoiHuong,
       nguoiChiId: nguoiChiId,
       nguoiHuongId: nguoiHuongId,
+      payers: {nguoiChiId: soTien}, // Chuyển đổi về Map để đồng bộ xử lý
+      nguoiHuongIds: [nguoiHuongId], // Chuyển đổi về List để đồng bộ xử lý
       ghiChu: ghiChu,
       ngayTao: ngayTao,
       attachmentBase64: attachmentBase64,
     );
   }
 
+  // 3. NÂNG CẤP HÀM VÀNG _createActivity: Xử lý được cả đơn lẻ lẫn tập thể bằng Transaction
   Future<void> _createActivity({
     required String groupId,
     required String type,
@@ -94,29 +143,50 @@ class FirebaseService {
     required String nguoiHuong,
     required String nguoiChiId,
     required String nguoiHuongId,
+    required Map<String, double> payers,
+    required List<String> nguoiHuongIds,
     String? ghiChu,
     DateTime? ngayTao,
     String? attachmentBase64,
   }) async {
     final groupRef = _db.collection('groups').doc(groupId);
-    final payerRef = groupRef.collection('members').doc(nguoiChiId);
-    final receiverRef = groupRef.collection('members').doc(nguoiHuongId);
     final activityRef = _db.collection('expenses').doc();
 
-    await _db.runTransaction((transaction) async {
-      final payerSnap = await transaction.get(payerRef);
-      final receiverSnap = await transaction.get(receiverRef);
+    // Tính toán số tiền chia đều cho mỗi người hưởng (Tránh chia cho 0)
+    final int totalReceivers = nguoiHuongIds.isEmpty ? 1 : nguoiHuongIds.length;
+    final double shareAmount = soTien / totalReceivers;
 
-      if (!payerSnap.exists || !receiverSnap.exists) {
-        throw StateError('Khong tim thay thanh vien de cap nhat so du.');
+    await _db.runTransaction((transaction) async {
+      // --- BƯỚC A: CẬP NHẬT SỐ DƯ CHO NHỮNG NGƯỜI CHI TIỀN ---
+      for (var entry in payers.entries) {
+        if (entry.value <= 0) continue; // Bỏ qua nếu người này đóng góp bằng 0
+        final pRef = groupRef.collection('members').doc(entry.key);
+        final pSnap = await transaction.get(pRef);
+
+        double pBalance = 0.0;
+        if (pSnap.exists) {
+          pBalance = _readBalance(pSnap.data() ?? {});
+        }
+        transaction.update(pRef, {'balance': pBalance + entry.value});
       }
 
-      final payerData = payerSnap.data() ?? <String, dynamic>{};
-      final receiverData = receiverSnap.data() ?? <String, dynamic>{};
-      final payerBalance = _readBalance(payerData);
-      final receiverBalance = _readBalance(receiverData);
+      // --- BƯỚC B: CẬP NHẬT SỐ DƯ CHO NHỮNG NGƯỜI HƯỞNG TIỀN ---
+      for (String rId in nguoiHuongIds) {
+        if (rId.trim().isEmpty) continue;
+        final rRef = groupRef.collection('members').doc(rId);
+        final rSnap = await transaction.get(rRef);
 
-      // Create activity record
+        double rBalance = 0.0;
+        if (rSnap.exists) {
+          rBalance = _readBalance(rSnap.data() ?? {});
+        }
+        transaction.update(rRef, {'balance': rBalance - shareAmount});
+      }
+
+      // --- BƯỚC C: TẠO BẢN GHI LỊCH SỬ HOẠT ĐỘNG (Ép kiểu Map rõ ràng) ---
+      final Map<String, dynamic> firestorePayers = {};
+      payers.forEach((k, v) => firestorePayers[k] = v);
+
       transaction.set(activityRef, {
         'groupId': groupId,
         'type': type,
@@ -126,6 +196,8 @@ class FirebaseService {
         'nguoiHuong': nguoiHuong.trim(),
         'nguoiChiId': nguoiChiId,
         'nguoiHuongId': nguoiHuongId,
+        'payers': firestorePayers,
+        'nguoiHuongIds': nguoiHuongIds,
         'ghiChu': (ghiChu ?? '').trim(),
         'attachmentBase64': (attachmentBase64 ?? '').trim(),
         'ngay Tao': ngayTao == null
@@ -133,10 +205,6 @@ class FirebaseService {
             : Timestamp.fromDate(ngayTao),
         'createdAt': FieldValue.serverTimestamp(),
       });
-
-      // Update balances: payer decreases, receiver increases
-      transaction.update(payerRef, {'balance': payerBalance + soTien});
-      transaction.update(receiverRef, {'balance': receiverBalance - soTien});
     });
   }
 

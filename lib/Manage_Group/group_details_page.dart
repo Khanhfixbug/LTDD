@@ -3,11 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'Group_option/add_payment.dart';
+import 'add_payment.dart';
 import 'Group_option/share_group_sheet.dart';
 import 'add_expense_page.dart';
 import 'add_member_sheet.dart';
-import 'update_group_page.dart';
+import 'suggest_settlement_page.dart';
+import 'transaction_detail_page.dart';
+import 'all_transactions_page.dart';
+import 'Group_option/update_group_page.dart';
 import 'package:screensetting/SETTING/app_language.dart';
 
 class GroupDetailsPage extends StatefulWidget {
@@ -145,6 +148,7 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
         createdBy: data['createdBy'] ?? "Admin",
         createdDate: _formatTimestamp(data['createdAt']),
         memberCount: membersSnapshot.docs.length,
+        description: data['description'] ?? data['groupDescription'] ?? "",
       ),
     );
   }
@@ -190,12 +194,20 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
                       onPressed: () => Navigator.pop(context),
                     ),
                     Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           groupData['groupName'] ?? appLanguage.t("Tên nhóm"),
                           style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
                         ),
-                        Text(appLanguage.t("Chi tiết chi tiêu"), style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                        const SizedBox(height: 4), // Tạo khoảng cách nhỏ giữa Tên và Mô tả
+                        Text(
+                          // Bốc trường description từ groupData, nếu trống thì hiện "Chưa có mô tả" làm dự phòng
+                          groupData['description'] ?? groupData['groupDescription'] ?? appLanguage.t("Chưa có mô tả nhóm"),
+                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          maxLines: 1, // Tránh việc mô tả quá dài làm vỡ bố cục giao diện Header
+                          overflow: TextOverflow.ellipsis, // Nếu mô tả quá dài sẽ tự động hiển thị dấu ...
+                        ),
                       ],
                     ),
                     IconButton(
@@ -236,16 +248,31 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
         double tongNhom = 0;
         double tongToi = 0;
 
-        //hiển thị số liệu thống kê nhanh mà không cần tạo thêm các bảng phụ
         if (snapshot.hasData) {
+          final String myUid = currentUser?.uid ?? '';
+          final String myEmail = currentUser?.email ?? '';
+
           for (var doc in snapshot.data!.docs) {
-            //xử lý mảng và chuyển đổi kiểu dữ liệu (_readDouble) linh hoạt
-            // Kiểm tra ID người chi (payerId) hoặc người tạo (userId)
             final data = doc.data() as Map<String, dynamic>;
             double amount = _readDouble(data['soTien'] ?? data['amount']);
             tongNhom += amount;
-            if (data['nguoiChiId'] == currentUser?.uid) {
-              tongToi += amount;
+
+            // --- BƯỚC CẬP NHẬT: TÍNH TOÁN THEO CẤU TRÚC PAYERS MỚI ---
+            if (data.containsKey('payers') && data['payers'] is Map) {
+              final payersMap = data['payers'] as Map<String, dynamic>;
+
+              // Kiểm tra xem ID (hoặc Email) của bạn có đóng góp tiền trong hóa đơn này không
+              if (payersMap.containsKey(myUid)) {
+                tongToi += _readDouble(payersMap[myUid]);
+              } else if (payersMap.containsKey(myEmail)) {
+                tongToi += _readDouble(payersMap[myEmail]);
+              }
+            }
+            // CƠ CHẾ DỰ PHÒNG: Dành cho các hóa đơn cũ lưu theo dạng một người chi đơn lẻ
+            else {
+              if (data['nguoiChiId'] == myUid || data['nguoiChiId'] == myEmail) {
+                tongToi += amount;
+              }
             }
           }
         }
@@ -266,18 +293,41 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _quickAction(Icons.add_shopping_cart, appLang.t("Chi tiêu"), () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => AddExpensePage(groupId: widget.groupId)));
-                  }),
-                  _quickAction(Icons.payment, appLang.t("Trả nợ"), () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => AddPayment(groupId: widget.groupId)));
-                  }),
-                  _quickAction(Icons.person_add, appLang.t("Thêm bạn"), () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (_) => AddMemberSheet(groupId: widget.groupId, onMemberAdded: (_) {}),
-                    );
-                  }),
+                  Expanded(
+                    child: _quickAction(Icons.add_shopping_cart, appLang.t("Thêm chi tiêu"), () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => AddExpensePage(groupId: widget.groupId)));
+                    }),
+                  ),
+                  Expanded(
+                    child: _quickAction(Icons.payment, appLang.t("Thanh toán"), () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => AddPayment(groupId: widget.groupId)));
+                    }),
+                  ),
+
+                  // --- THÊM NÚT GỢI Ý CHIA TIỀN ---
+                  Expanded(
+                    child: _quickAction(Icons.lightbulb_outline, appLang.t("Gợi ý chia tiên"), () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SuggestSettlementPage(
+                            groupId: widget.groupId,
+                            appLang: appLang,
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  // ----------------------------------------
+
+                  Expanded(
+                    child: _quickAction(Icons.person_add, appLang.t("Thêm bạn"), () {
+                      showModalBottomSheet(
+                        context: context,
+                        builder: (_) => AddMemberSheet(groupId: widget.groupId, onMemberAdded: (_) {}),
+                      );
+                    }),
+                  ),
                 ],
               )
             ],
@@ -308,8 +358,8 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
 
             return _buildMemberTile(
               m['displayName'] ?? m['name'] ?? appLang.t("Thành viên"),
-              "$label: ${appLang.formatMoney(balance.abs())}",
-              balance >= 0 ? Colors.green : Colors.red,
+              balance,
+              appLang,
             );
           },
         );
@@ -318,45 +368,166 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
   }
 
   Widget _buildActivityTab(AppLanguage appLang) {
+    // BƯỚC 1: Dùng StreamBuilder để lấy toàn bộ thành viên trong nhóm về làm bộ nhớ đệm (Cache)
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('expenses')
-          .where('groupId', isEqualTo: widget.groupId)
-          .orderBy('createdAt', descending: true)
+          .collection('groups')
+          .doc(widget.groupId)
+          .collection('members')
           .snapshots(),
-      builder: (context, snapshot) {
-        // BƯỚC SỬA: Kiểm tra nếu có lỗi (ví dụ lỗi thiếu Index)
-        if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Text(
-                "Lỗi truy vấn: ${snapshot.error}",
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          );
+      builder: (context, membersSnapshot) {
+        // Tạo một Map trống để lưu: { 'Mã-ID': 'Tên hiển thị thật' }
+        Map<String, String> memberMap = {};
+
+        if (membersSnapshot.hasData) {
+          for (var doc in membersSnapshot.data!.docs) {
+            final mData = doc.data() as Map<String, dynamic>;
+            String name = mData['displayName'] ?? mData['name'] ?? doc.id;
+            memberMap[doc.id] = name; // Lưu ID và Tên tương ứng vào Map
+          }
         }
 
-        // Đang tải dữ liệu
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+        // BƯỚC 2: Gọi Stream lấy danh sách các giao dịch (Giữ nguyên logic cũ của Toản)
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('expenses')
+              .where('groupId', isEqualTo: widget.groupId)
+              .orderBy('createdAt', descending: true)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Text(
+                    "Lỗi truy vấn: ${snapshot.error}",
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              );
+            }
 
-        final docs = snapshot.data!.docs;
-        if (docs.isEmpty) return Center(child: Text(appLang.t("Chưa có giao dịch")));
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: docs.length,
-          itemBuilder: (context, index) {
-            final data = docs[index].data() as Map<String, dynamic>;
-            return _buildTransactionItem(
-              data['tenChiTieu'] ?? appLang.t("Chi tiêu"),
-              "${appLang.t("Người chi")}: ${data['nguoiChi'] ?? '...'}",
-              appLang.formatMoney(_readDouble(data['soTien'])),
-              _formatTimestamp(data['createdAt']),
+            final docs = snapshot.data!.docs;
+            if (docs.isEmpty) return Center(child: Text(appLang.t("Chưa có giao dịch")));
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- KHU VỰC TIÊU ĐỀ MỚI THÊM ---
+                Padding(
+                  padding: const EdgeInsets.only(left: 20, right: 20, top: 15, bottom: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end, // Căn đều phần chân chữ
+                    children: [
+                      // Bên trái: Chữ tiêu đề và Ngày hiện tại
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            appLang.t("Giao dịch gần nhất"),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            // Hiển thị ngày hôm nay (Ví dụ: 25/05/2026)
+                            "${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}",
+                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                      // Bên phải: Nút "Tất cả" để chuyển trang
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AllTransactionsPage(
+                                groupId: widget.groupId,
+                                appLang: appLang,
+                                memberMap: memberMap, // Truyền luôn bộ nhớ đệm Tên thành viên sang trang mới
+                              ),
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          appLang.t("Tất cả"),
+                          style: const TextStyle(
+                            color: Color(0xFF006D4E), // Màu chủ đạo của app
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Danh sách giao dịch gần nhất (Bọc Expanded để không bị vỡ khung trong Column)
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    // Giới hạn hiển thị khoảng 5-10 giao dịch gần nhất ở màn hình chính cho đẹp và mượt
+                    itemCount: docs.length > 5 ? 5 : docs.length,
+                    itemBuilder: (context, index) {
+                      final docSnapshot = docs[index];
+                      final data = docSnapshot.data() as Map<String, dynamic>;
+
+                      // ... (Giữ nguyên toàn bộ logic xử lý dữ liệu và return InkWell bên trong ListView cũ của Toản) ...
+                      String rawPayerId = '';
+                      if (data['payers'] is Map && (data['payers'] as Map).isNotEmpty) {
+                        rawPayerId = (data['payers'] as Map).keys.first.toString();
+                      } else if (data['nguoiChi'] != null) {
+                        rawPayerId = data['nguoiChi'].toString();
+                      }
+                      String finalPayerName = memberMap[rawPayerId] ?? rawPayerId;
+                      if (finalPayerName.isEmpty) finalPayerName = '...';
+
+                      String displayTitle = data['tenChiTieu'] ?? appLang.t("Chi tiêu");
+                      if (data['type'] == 'payment' && (data['tenChiTieu'] == null || data['tenChiTieu'].toString().isEmpty)) {
+                        displayTitle = appLang.t("Thanh toán nợ");
+                      }
+
+                      return InkWell(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TransactionDetailPage(
+                                transactionDoc: docSnapshot,
+                                groupId: widget.groupId,
+                                appLang: appLang,
+                                onEditTrigger: (ctx, doc) => _showExpenseDetailsSheet(ctx, doc, appLang),
+                              ),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: _buildTransactionItem(
+                          displayTitle,
+                          "${appLang.t("Người chi")}: $finalPayerName",
+                          appLang.formatMoney(_readDouble(data['soTien'])),
+                          _formatTimestamp(data['createdAt']),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             );
           },
         );
@@ -364,30 +535,51 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
     );
   }
 
-  Widget _buildMemberTile(String name, String sub, Color color) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      margin: const EdgeInsets.only(bottom: 10),
+  Widget _buildMemberTile(String name, double balance, AppLanguage appLang) {
+    final bool isReceive = balance >= 0;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
+      ),
       child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue.shade100,
-          child: Text(name.isNotEmpty ? name[0].toUpperCase() : "?"),
-        ),
+        leading: CircleAvatar(backgroundColor: Colors.blue[50], child: Text(name[0].toUpperCase())),
         title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(sub, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
+        subtitle: Text(isReceive ? appLang.t("Dư") : appLang.t("Nợ")),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(isReceive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                size: 16, color: isReceive ? Colors.green : Colors.red),
+            const SizedBox(width: 8),
+            Icon(Icons.monetization_on_rounded, size: 16, color: Colors.amber[700]),
+            const SizedBox(width: 4),
+            Text(appLang.formatMoney(balance.abs()),
+                style: TextStyle(fontWeight: FontWeight.bold, color: isReceive ? Colors.green : Colors.red)),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildTransactionItem(String title, String sub, String amount, String date) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15)),
       child: ListTile(
         leading: const Icon(Icons.receipt_long, color: Colors.blue),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text("$sub\n$date", style: const TextStyle(fontSize: 12)),
-        trailing: Text(amount, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-        isThreeLine: true,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.monetization_on_rounded, size: 16, color: Colors.amber[700]),
+            const SizedBox(width: 4),
+            Text(amount, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
@@ -445,6 +637,287 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
     );
   }
 
+  void _showExpenseDetailsSheet(BuildContext context, DocumentSnapshot expenseDoc, AppLanguage appLang) {
+    final expenseData = expenseDoc.data() as Map<String, dynamic>? ?? {};
+    final String expenseId = expenseDoc.id;
+    final double totalAmount = _readDouble(expenseData['soTien'] ?? expenseData['amount']);
+    final Map<String, dynamic> payers = expenseData['payers'] is Map ? Map<String, dynamic>.from(expenseData['payers']) : {};
+
+    final List<String> oldReceiverIds = List<String>.from(expenseData['nguoiHuongIds'] ?? []);
+
+    final Map<String, int> localReceiverCounts = {};
+    for (var rId in oldReceiverIds) {
+      if (rId.isNotEmpty) localReceiverCounts[rId] = 1;
+    }
+
+    if (expenseData['receiverCounts'] is Map) {
+      final savedCounts = expenseData['receiverCounts'] as Map;
+      savedCounts.forEach((k, v) {
+        localReceiverCounts[k.toString()] = int.tryParse(v.toString()) ?? 1;
+      });
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            int totalSeats = localReceiverCounts.values.fold(0, (sum, count) => sum + count);
+            if (totalSeats <= 0) totalSeats = 1;
+
+            double perSeatAmount = totalAmount / totalSeats;
+
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('groups')
+                  .doc(widget.groupId)
+                  .collection('members')
+                  .snapshots(),
+              builder: (context, memberSnapshot) {
+                if (!memberSnapshot.hasData) {
+                  return const SizedBox(height: 200,
+                      child: Center(child: CircularProgressIndicator()));
+                }
+
+                final groupMembers = memberSnapshot.data!.docs;
+
+                return Padding(
+                  padding: EdgeInsets.only(
+                    top: 20, left: 20, right: 20,
+                    bottom: MediaQuery
+                        .of(context)
+                        .viewInsets
+                        .bottom + 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              expenseData['tenChiTieu'] ??
+                                  appLang.t("Chi tiết chi tiêu"),
+                              style: const TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            "${appLang.formatMoney(totalAmount)}",
+                            style: const TextStyle(fontSize: 18,
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      if ((expenseData['ghiChu'] ?? '')
+                          .toString()
+                          .isNotEmpty)
+                        Text("${appLang.t(
+                            "Ghi chú")}: ${expenseData['ghiChu']}",
+                            style: TextStyle(color: Colors.grey[600])),
+
+                      const Divider(height: 30),
+                      Text(
+                        "${appLang.t(
+                            "Phân chia suất ăn (bao gồm người đi kèm)")}:",
+                        style: const TextStyle(fontSize: 15,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+
+                      ConstrainedBox(
+                        constraints: BoxConstraints(maxHeight: MediaQuery
+                            .of(context)
+                            .size
+                            .height * 0.35),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: groupMembers.length,
+                          itemBuilder: (context, idx) {
+                            final mDoc = groupMembers[idx];
+                            final mData = mDoc.data() as Map<String, dynamic>;
+                            final String mId = mDoc.id;
+                            final String mName = mData['displayName'] ??
+                                mData['name'] ?? 'Thành viên';
+
+                            bool isReceiver = localReceiverCounts.containsKey(
+                                mId);
+                            int currentCount = localReceiverCounts[mId] ?? 0;
+                            double currentMemberTotal = currentCount *
+                                perSeatAmount;
+
+                            return CheckboxListTile(
+                              title: Text(mName, style: const TextStyle(
+                                  fontWeight: FontWeight.w500)),
+                              subtitle: isReceiver
+                                  ? Text(
+                                "Suất: $currentCount | Trả: ${appLang
+                                    .formatMoney(currentMemberTotal)}",
+                                style: TextStyle(color: Colors.blue[700],
+                                    fontWeight: FontWeight.bold),
+                              )
+                                  : Text(appLang.t("Không tham gia hưởng")),
+                              value: isReceiver,
+                              controlAffinity: ListTileControlAffinity.leading,
+                              onChanged: (bool? checked) {
+                                setSheetState(() {
+                                  if (checked == true) {
+                                    localReceiverCounts[mId] = 1;
+                                  } else {
+                                    localReceiverCounts.remove(mId);
+                                  }
+                                });
+                              },
+                              secondary: isReceiver
+                                  ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                        Icons.remove_circle_outline,
+                                        color: Colors.red),
+                                    onPressed: () {
+                                      if (currentCount > 1) {
+                                        setSheetState(() =>
+                                        localReceiverCounts[mId] =
+                                            currentCount - 1);
+                                      }
+                                    },
+                                  ),
+                                  Text("$currentCount", style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold)),
+                                  IconButton(
+                                    icon: const Icon(Icons.add_circle_outline,
+                                        color: Colors.green),
+                                    onPressed: () {
+                                      setSheetState(() =>
+                                      localReceiverCounts[mId] =
+                                          currentCount + 1);
+                                    },
+                                  ),
+                                ],
+                              )
+                                  : null,
+                            );
+                          },
+                        ),
+                      ),
+
+                      const Divider(height: 30),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("Tổng số suất ăn: $totalSeats",
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold)),
+                          Text("1 suất = ${appLang.formatMoney(
+                              perSeatAmount)} ",
+                              style: const TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green[700],
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15)),
+                          ),
+                          onPressed: localReceiverCounts.isEmpty
+                              ? null
+                              : () async {
+                            Navigator.pop(context);
+
+                            final WriteBatch batch = FirebaseFirestore.instance
+                                .batch();
+                            final groupRef = FirebaseFirestore.instance
+                                .collection('groups').doc(widget.groupId);
+
+                            // 1. Hoàn tác số dư cũ
+                            payers.forEach((pId, pAmount) {
+                              final pRef = groupRef.collection('members').doc(
+                                  pId);
+                              batch.update(pRef, {
+                                'balance': FieldValue.increment(
+                                    -_readDouble(pAmount))
+                              });
+                            });
+
+                            final int oldReceiversCount = oldReceiverIds.isEmpty
+                                ? 1
+                                : oldReceiverIds.length;
+                            final double oldShare = totalAmount /
+                                oldReceiversCount;
+                            for (String rId in oldReceiverIds) {
+                              final rRef = groupRef.collection('members').doc(
+                                  rId);
+                              batch.update(rRef,
+                                  {'balance': FieldValue.increment(oldShare)});
+                            }
+
+                            // 2. Thiết lập tính toán số dư suất ăn mới
+                            payers.forEach((pId, pAmount) {
+                              final pRef = groupRef.collection('members').doc(
+                                  pId);
+                              batch.update(pRef, {
+                                'balance': FieldValue.increment(
+                                    _readDouble(pAmount))
+                              });
+                            });
+
+                            localReceiverCounts.forEach((rId, count) {
+                              final rRef = groupRef.collection('members').doc(
+                                  rId);
+                              double memberNewShare = count * perSeatAmount;
+                              batch.update(rRef, {
+                                'balance': FieldValue.increment(-memberNewShare)
+                              });
+                            });
+
+                            final expenseRef = FirebaseFirestore.instance
+                                .collection('expenses').doc(expenseId);
+                            batch.update(expenseRef, {
+                              'nguoiHuongIds': localReceiverCounts.keys
+                                  .toList(),
+                              'receiverCounts': localReceiverCounts,
+                            });
+
+                            await batch.commit();
+
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(appLang.t(
+                                    "Đã cập nhật phân bổ chi tiêu thành công!"))),
+                              );
+                            }
+                          },
+                          child: Text(appLang.t("Lưu"), style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            );
+          },
+        );
+      },
+    );
+  }
+
   double _readDouble(dynamic val) {
     if (val is num) return val.toDouble();
     return double.tryParse(val?.toString() ?? '0') ?? 0;
@@ -458,3 +931,4 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
     return value?.toString() ?? "";
   }
 }
+

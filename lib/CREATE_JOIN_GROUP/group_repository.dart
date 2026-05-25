@@ -38,6 +38,7 @@ class GroupDetails {
     required this.memberCount,
     required this.ownerName,
     this.isArchived = false, // Mặc định là false
+    this.lastActivity, //
   });
 
   final String groupId;
@@ -50,6 +51,7 @@ class GroupDetails {
   final int memberCount;
   final String ownerName;
   final bool isArchived; // Thuộc tính để kiểm tra nhóm đã lưu trữ chưa
+  final Timestamp? lastActivity; //
 }
 
 class GroupRepository {
@@ -266,6 +268,8 @@ class GroupRepository {
       memberCount: membersSnapshot.docs.length,
       ownerName: ownerName,
       isArchived: data['isArchived'] ?? false, // Đọc field isArchived từ Firestore
+      lastActivity: data['lastActivity'] as Timestamp? ?? data['createdAt'] as Timestamp?,//
+
     );
   }
 

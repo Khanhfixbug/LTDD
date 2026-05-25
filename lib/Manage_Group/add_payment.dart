@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'package:provider/provider.dart';
 import 'package:screensetting/SETTING/app_language.dart'; // Đảm bảo đúng đường dẫn
 
-import '../filebase_service.dart';
+import 'filebase_service.dart';
 
 class AddPayment extends StatefulWidget {
   final String groupId;
@@ -379,6 +380,9 @@ class _AddPaymentState extends State<AddPayment> {
                   ngayTao: selectedDate,
                   attachmentBase64: _attachmentBase64,
                 );
+                await FirebaseFirestore.instance.collection('groups').doc(widget.groupId).update({
+                  'lastActivity': FieldValue.serverTimestamp(),
+                });
                 if (mounted) Navigator.pop(context);
               }
             : null,

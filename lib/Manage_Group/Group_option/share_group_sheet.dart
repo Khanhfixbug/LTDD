@@ -11,6 +11,7 @@ class ShareGroupSheet extends StatelessWidget {
   final String createdBy;
   final String createdDate;
   final int memberCount;
+  final String description;
 
   const ShareGroupSheet({
     super.key,
@@ -19,6 +20,7 @@ class ShareGroupSheet extends StatelessWidget {
     required this.createdBy,
     required this.createdDate,
     required this.memberCount,
+    required this.description,
   });
 
   @override
@@ -52,10 +54,25 @@ class ShareGroupSheet extends StatelessWidget {
 
           // Thông tin nhóm
           _buildInfoRow(appLanguage.t("Tên nhóm"), groupName),
-          _buildInfoRow(appLanguage.t("Tạo bởi"), createdBy),
+          FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('groups')
+                .doc(groupId)
+                .collection('members')
+                .doc(createdBy) // Dùng mã ID truyền vào để đi dò tìm tên
+                .get(),
+            builder: (context, memberSnap) {
+              String creatorName = createdBy; // Mặc định nếu chưa tải xong hoặc lỗi thì hiện ID gốc
+              if (memberSnap.hasData && memberSnap.data!.exists) {
+                final mData = memberSnap.data!.data() as Map<String, dynamic>;
+                creatorName = mData['displayName'] ?? mData['name'] ?? creatorName;
+              }
+              return _buildInfoRow(appLanguage.t("Tạo bởi"), creatorName);
+            },
+          ),
           _buildInfoRow(appLanguage.t("Tạo ngày"), createdDate),
           _buildInfoRow(appLanguage.t("Số thành viên"), memberCount.toString()),
-          _buildInfoRow(appLanguage.t("Mô tả"), appLanguage.t("Nhóm quản lý chi tiêu")),
+          _buildInfoRow(appLanguage.t("Mô tả"), description.isNotEmpty ? description : appLanguage.t("Chưa có mô tả")),
 
           const SizedBox(height: 25),
 
@@ -72,10 +89,15 @@ class ShareGroupSheet extends StatelessWidget {
                 );
               }
 
-              final code = snap.data?.data()?['groupCode']?.toString() ?? groupId;
+
+              final groupData = snap.data?.data() ?? {};
+              final code = groupData['groupCode']?.toString() ?? groupId;
+
+
 
               return Column(
                 children: [
+
                   // 1. Mã QR Code
                   Container(
                     padding: const EdgeInsets.all(10),

@@ -9,7 +9,7 @@ import 'filebase/firebase_options.dart';
 import 'home_page.dart';
 import 'Manage_Group/group_details_page.dart';
 import 'Manage_Group/add_expense_page.dart';
-import 'Manage_Group/Group_option/add_payment.dart';
+import 'Manage_Group/add_payment.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
