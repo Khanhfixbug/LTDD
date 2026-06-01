@@ -1,8 +1,9 @@
-import 'dart:convert';
+﻿import 'dart:convert';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../home_page.dart';
+
 import 'login_repository.dart';
 
 class RegisterAccountScreen extends StatefulWidget {
@@ -32,6 +33,36 @@ class _RegisterAccountScreenState extends State<RegisterAccountScreen> {
     _displayNameController.dispose();
     _emailController.dispose();
     super.dispose();
+  }
+
+  Widget _requiredLabel(String text) {
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          color: Colors.grey.shade700,
+          fontSize: 16,
+        ),
+        children: [
+          TextSpan(text: text),
+          const TextSpan(
+            text: ' *',
+            style: TextStyle(
+              color: Colors.red,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+          TextSpan(
+            text: ' bắt buộc',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontStyle: FontStyle.italic,
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _pickAvatar(ImageSource source) async {
@@ -110,9 +141,9 @@ class _RegisterAccountScreenState extends State<RegisterAccountScreen> {
       final password = _passwordController.text.trim();
       final displayName = _displayNameController.text.trim();
       final phone = _phoneController.text.trim();
-      //Tạo tài khoản trên hệ thống Authentication của Google
-      final userCredential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -125,7 +156,7 @@ class _RegisterAccountScreenState extends State<RegisterAccountScreen> {
       if (displayName.isNotEmpty) {
         await user.updateDisplayName(displayName);
       }
-      //Đồng bộ hóa dữ liệu sang Database Firestore qua Repository
+
       final result = await _loginRepository.createAccount(
         uid: user.uid,
         email: email,
@@ -148,13 +179,17 @@ class _RegisterAccountScreenState extends State<RegisterAccountScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tạo tài khoản thành công.')),
+      await user.sendEmailVerification();
+      await FirebaseAuth.instance.signOut();
+
+      if (!mounted) return;
+
+      await _showInfoDialog(
+        title: 'Xác minh email',
+        message:
+            'Tài khoản đã được tạo. Chúng tôi đã gửi email xác minh đến $email. Vui lòng xác minh trước khi đăng nhập.',
       );
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePage()),
-        (route) => false,
-      );
+      Navigator.of(context).pop();
     } on FirebaseAuthException catch (e) {
       if (!mounted) {
         return;
@@ -296,7 +331,7 @@ class _RegisterAccountScreenState extends State<RegisterAccountScreen> {
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          labelText: 'Email *',
+                          label: _requiredLabel('Email'),
                           prefixIcon: const Icon(Icons.email_outlined),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -320,7 +355,7 @@ class _RegisterAccountScreenState extends State<RegisterAccountScreen> {
                         controller: _passwordController,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
-                          labelText: 'Mật khẩu *',
+                          label: _requiredLabel('Mật khẩu'),
                           prefixIcon: const Icon(Icons.lock_rounded),
                           suffixIcon: IconButton(
                             onPressed: () {

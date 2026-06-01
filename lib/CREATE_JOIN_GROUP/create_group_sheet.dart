@@ -62,6 +62,26 @@ class CreateGroupSheet extends StatelessWidget {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const JoinGroupScreen(scanOnOpen: true),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(18),
+            child: _buildItem(
+              icon: Icons.qr_code_scanner,
+              title: lang.t('Tham gia nhóm bằng QR'),
+              subtitle: lang.t(
+                'Quét mã QR được tạo từ nhóm để tham gia nhanh.',
+              ),
+            ),
+          ),
           const SizedBox(height: 20),
         ],
       ),
