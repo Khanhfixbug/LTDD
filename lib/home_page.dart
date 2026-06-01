@@ -71,10 +71,10 @@ class _HomePageState extends State<HomePage> {
             final raw = data['balance'];
             bal = (raw is num) ? raw.toDouble() : (double.tryParse(raw?.toString() ?? '') ?? 0.0);
           }
-
+          //Tự động cập nhật số dư khi có bất kỳ ai thêm chi tiêu trong nhóm
           setState(() {
             _balances[g.groupId] = bal;
-            _recomputeTotals();
+            _recomputeTotals();// Tính toán lại tổng thu/chi ngay lập tức
           });
         });
 
@@ -161,6 +161,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+
   Widget _buildBottomNav(BuildContext context) {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
@@ -197,18 +198,108 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildHeader(User? currentUser, AppLanguage appLang) {
     final name = currentUser?.displayName ?? currentUser?.email?.split('@')[0] ?? "Bạn";
+    //  DANH SÁCH AVATAR CON VẬT DỄ THƯƠNG (Dạng Icon chuyên nghiệp)
+    // có thể đổi sang các icon con vật khác tùy ý như: pets, cattery, bird, dove, owl,...
+    final List<IconData> animalIcons = [
+      Icons.pets,            // Dấu chân thú cưng
+      Icons.flutter_dash,    // Chú chim Dash của Flutter (Siêu hợp với dân code Flutter!)
+      Icons.cruelty_free,    // Chú thỏ hoạt hình
+
+    ];
+
+    // Chọn ngẫu nhiên hoặc cố định một icon thú cưng thú vị dựa theo độ dài tên
+    final IconData randomAnimal = animalIcons[name.length % animalIcons.length];
+
     return Container(
-      padding: const EdgeInsets.only(top: 60, left: 20, right: 20, bottom: 80),
+      // Tăng nhẹ padding bottom để tạo khoảng không gian bo cong mềm mại hơn
+      padding: const EdgeInsets.only(top: 65, left: 24, right: 24, bottom: 90),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.blue[700]!, Colors.blue[400]!]),
-        borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue[800]!, // Xanh đậm hiện đại
+            Colors.blue[500]!, // Xanh sáng năng động
+            Colors.teal[400]!, // Hòa chút ánh ngọc lục bảo cho bắt mắt
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(35),
+          bottomRight: Radius.circular(35),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          )
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("${appLang.t("Chào")}, $name", 
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w500)),
-          const CircleAvatar(backgroundColor: Colors.white24, child: Icon(Icons.person, color: Colors.white)),
+          // KHU VỰC TEXT: Chào mừng và Tên người dùng xếp dọc chuyên nghiệp
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  appLang.t("Chào mừng quay trở lại,"),
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  name,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24, // Tăng kích thước chữ tên to rõ ràng
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          offset: Offset(0, 2),
+                          blurRadius: 4,
+                        )
+                      ]
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(width: 15),
+
+          // KHU VỰC AVATAR: Con vật thú vị thiết kế nổi khối nổi bật
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.6), width: 2.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                )
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 26, // Tăng kích thước avatar vừa vặn, đẹp mắt
+              backgroundColor: Colors.white, // Nền trắng làm nổi bật icon con vật màu sắc
+              child: Icon(
+                randomAnimal,
+                color: Colors.orange[700], // Màu cam rực rỡ mang lại cảm giác vui tươi
+                size: 30,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -220,23 +311,67 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         children: [
-          Text(appLang.t(isReceive ? "Bạn nhận được" : "Bạn cần trả"), 
-            style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-          const SizedBox(height: 8),
+          // TIÊU ĐỀ KÈM ICON MŨI TÊN (Lên cho Nhận, Xuống cho Trả)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isReceive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                size: 25,
+                color: isReceive ? Colors.green[600] : Colors.red[600],
+              ),
+              const SizedBox(width: 4),
+              Text(
+                appLang.t(isReceive ? "Bạn nhận được" : "Bạn cần trả"),
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // KHU VỰC HIỂN THỊ SỐ TIỀN KHỚP VỚI ĐỒNG XU
           loading
               ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
-              : Text(
+              : Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // 🌟 ICON ĐỒNG XU VÀNG (Dùng Icon tiền tệ đồng bộ sắc cam vàng)
+              Icon(
+                Icons.monetization_on_rounded, // Hoặc dùng Icons.paid_rounded nhìn cũng rất đẹp
+                size: 18,
+                color: isReceive ? Colors.amber[600] : Colors.orange[400],
+              ),
+              const SizedBox(width: 4),
+
+              // SỐ TIỀN TÍNH TOÁN
+              Flexible(
+                child: Text(
                   appLang.formatMoney(amount),
                   style: TextStyle(
-                    color: isReceive ? Colors.green : Colors.red,
-                    fontSize: 18,
+                    color: isReceive ? Colors.green[700] : Colors.red[700],
+                    fontSize: 17, // Thu nhỏ nhẹ xuống 17 để khi thêm icon không bị tràn dòng trên màn hình nhỏ
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -258,33 +393,129 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildGroupCard(BuildContext context, GroupDetails group, AppLanguage appLang) {
     final balance = _balances[group.groupId] ?? 0;
+
+    // Giả định đối tượng 'group' (GroupDetails) có chứa biến thời gian.
+    // kiểm tra xem model GroupDetails lưu trường này tên là gì nhé (ví dụ: lastActivity, updatedAt hoặc createdAt)
+    final dynamic groupTimestamp = group.lastActivity;
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: ListTile(
+      child: InkWell( // Sử dụng InkWell thay ListTile để bắt sự kiện chạm mượt mà trên toàn bộ layout custom
         onTap: () async {
           await Navigator.push(
-            context, 
-            MaterialPageRoute(builder: (_) => GroupDetailsPage(groupId: group.groupId))
+              context,
+              MaterialPageRoute(builder: (_) => GroupDetailsPage(groupId: group.groupId))
           );
           _loadGroupsAndSubscribe();
         },
-        leading: CircleAvatar(
-          backgroundColor: Colors.blue[50],
-          child: const Icon(Icons.group, color: Colors.blue),
-        ),
-        title: Text(group.groupName, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("${group.memberCount} ${appLang.t("thành viên")}"),
-        trailing: Text(
-          appLang.formatMoney(balance),
-          style: TextStyle(
-            color: balance >= 0 ? Colors.green : Colors.red,
-            fontWeight: FontWeight.bold,
-            fontSize: 15
+        borderRadius: BorderRadius.circular(15),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              // 1. Biểu tượng nhóm bên trái
+              CircleAvatar(
+                backgroundColor: Colors.blue[50],
+                child: const Icon(Icons.group, color: Colors.blue),
+              ),
+              const SizedBox(width: 15),
+
+              // 2. Khu vực hiển thị thông tin TEXT bên trái (Tên nhóm, số thành viên, thời gian)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      group.groupName,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "${group.memberCount} ${appLang.t("thành viên")}",
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 2),
+                    // THÊM: Dòng thời gian hoạt động gần nhất dịch tự động
+                    Text(
+                      "${appLang.t("Gần nhất")}: ${_formatTimeAgo(groupTimestamp, appLang)}",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[500],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 10),
+
+              // 3. Khu vực hiển thị Tiền số dư và chữ "Số dư" bên phải
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    appLang.formatMoney(balance),
+                    style: TextStyle(
+                      color: balance >= 0 ? Colors.green[700] : Colors.red[700],
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // THÊM: Chữ "Số dư" ngay dưới số tiền hiển thị
+                  Text(
+                    appLang.t("Số dư"),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+
+  String _formatTimeAgo(dynamic timestamp, AppLanguage appLang) {
+    if (timestamp == null) return appLang.t("Chưa có hoạt động");
+
+    DateTime lastTime;
+    if (timestamp is Timestamp) {
+      lastTime = timestamp.toDate();
+    } else if (timestamp is DateTime) {
+      lastTime = timestamp;
+    } else {
+      return appLang.t("Chưa có hoạt động");
+    }
+
+    final now = DateTime.now();
+    final difference = now.difference(lastTime);
+
+    if (difference.inSeconds < 60) {
+      return "${difference.inSeconds} ${appLang.t("giây trước")}";
+    } else if (difference.inMinutes < 60) {
+      return "${difference.inMinutes} ${appLang.t("phút trước")}";
+    } else if (difference.inHours < 24) {
+      return "${difference.inHours} ${appLang.t("giờ trước")}";
+    } else if (difference.inDays < 7) {
+      return "${difference.inDays} ${appLang.t("ngày trước")}";
+    } else if ((difference.inDays / 7).floor() < 4) {
+      return "${(difference.inDays / 7).floor()} ${appLang.t("tuần trước")}";
+    } else if ((difference.inDays / 30).floor() < 12) {
+      return "${(difference.inDays / 30).floor()} ${appLang.t("tháng trước")}";
+    } else {
+      return "${(difference.inDays / 365).floor()} ${appLang.t("năm trước")}";
+    }
   }
 }

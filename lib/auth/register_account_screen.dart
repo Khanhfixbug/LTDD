@@ -110,7 +110,7 @@ class _RegisterAccountScreenState extends State<RegisterAccountScreen> {
       final password = _passwordController.text.trim();
       final displayName = _displayNameController.text.trim();
       final phone = _phoneController.text.trim();
-
+      //Tạo tài khoản trên hệ thống Authentication của Google
       final userCredential =
           await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
@@ -125,7 +125,7 @@ class _RegisterAccountScreenState extends State<RegisterAccountScreen> {
       if (displayName.isNotEmpty) {
         await user.updateDisplayName(displayName);
       }
-
+      //Đồng bộ hóa dữ liệu sang Database Firestore qua Repository
       final result = await _loginRepository.createAccount(
         uid: user.uid,
         email: email,

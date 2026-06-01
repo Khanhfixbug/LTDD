@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:screensetting/SETTING/app_language.dart'; 
+import 'package:screensetting/SETTING/app_language.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class ShareGroupSheet extends StatelessWidget {
   final String groupId;
@@ -10,6 +11,7 @@ class ShareGroupSheet extends StatelessWidget {
   final String createdBy;
   final String createdDate;
   final int memberCount;
+  final String description;
 
   const ShareGroupSheet({
     super.key,
@@ -18,6 +20,7 @@ class ShareGroupSheet extends StatelessWidget {
     required this.createdBy,
     required this.createdDate,
     required this.memberCount,
+    required this.description,
   });
 
   @override
@@ -51,10 +54,25 @@ class ShareGroupSheet extends StatelessWidget {
 
           // Thông tin nhóm
           _buildInfoRow(appLanguage.t("Tên nhóm"), groupName),
-          _buildInfoRow(appLanguage.t("Tạo bởi"), createdBy),
+          FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('groups')
+                .doc(groupId)
+                .collection('members')
+                .doc(createdBy) // Dùng mã ID truyền vào để đi dò tìm tên
+                .get(),
+            builder: (context, memberSnap) {
+              String creatorName = createdBy; // Mặc định nếu chưa tải xong hoặc lỗi thì hiện ID gốc
+              if (memberSnap.hasData && memberSnap.data!.exists) {
+                final mData = memberSnap.data!.data() as Map<String, dynamic>;
+                creatorName = mData['displayName'] ?? mData['name'] ?? creatorName;
+              }
+              return _buildInfoRow(appLanguage.t("Tạo bởi"), creatorName);
+            },
+          ),
           _buildInfoRow(appLanguage.t("Tạo ngày"), createdDate),
           _buildInfoRow(appLanguage.t("Số thành viên"), memberCount.toString()),
-          _buildInfoRow(appLanguage.t("Mô tả"), appLanguage.t("Nhóm quản lý chi tiêu")),
+          _buildInfoRow(appLanguage.t("Mô tả"), description.isNotEmpty ? description : appLanguage.t("Chưa có mô tả")),
 
           const SizedBox(height: 25),
 
@@ -71,10 +89,40 @@ class ShareGroupSheet extends StatelessWidget {
                 );
               }
 
-              final code = snap.data?.data()?['groupCode']?.toString() ?? groupId;
+
+              final groupData = snap.data?.data() ?? {};
+              final code = groupData['groupCode']?.toString() ?? groupId;
+
+
 
               return Column(
                 children: [
+
+                  // 1. Mã QR Code
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                    ),
+                    child: QrImageView(
+                      data: code, // Dữ liệu mã hóa (Mã nhóm)
+                      version: QrVersions.auto,
+                      size: 180.0,
+                      eyeStyle: const QrEyeStyle(
+                        eyeShape: QrEyeShape.square,
+                        color: Color(0xFF006D4E), // Màu đồng nhất với app
+                      ),
+                      dataModuleStyle: const QrDataModuleStyle(
+                        dataModuleShape: QrDataModuleShape.square,
+                        color: Color(0xFF006D4E),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
                   Text(
                     appLanguage.t("Mã tham gia nhóm"),
                     style: TextStyle(

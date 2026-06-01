@@ -25,6 +25,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     'Gia đình',
     'Bạn bè',
     'Đồng nghiệp',
+    'Người yêu',
     'Khác',
   ];
 

@@ -89,11 +89,11 @@ class _JoinGroupScreenState extends State<JoinGroupScreen> {
 
   Future<void> _handleContinue() async {
     FocusScope.of(context).unfocus();
-
+    //Chặn tương tác người dùng khi đang xử lý
     setState(() {
       _isSubmitting = true;
     });
-
+    //Truy vấn Database để tìm nhóm theo mã ID
     try {
       final group = await _repository.findGroupByCode(_codeController.text);
       if (!mounted) {

@@ -38,6 +38,7 @@ class GroupDetails {
     required this.memberCount,
     required this.ownerName,
     this.isArchived = false, // Mặc định là false
+    this.lastActivity, //
   });
 
   final String groupId;
@@ -50,6 +51,7 @@ class GroupDetails {
   final int memberCount;
   final String ownerName;
   final bool isArchived; // Thuộc tính để kiểm tra nhóm đã lưu trữ chưa
+  final Timestamp? lastActivity; //
 }
 
 class GroupRepository {
@@ -266,12 +268,15 @@ class GroupRepository {
       memberCount: membersSnapshot.docs.length,
       ownerName: ownerName,
       isArchived: data['isArchived'] ?? false, // Đọc field isArchived từ Firestore
+      lastActivity: data['lastActivity'] as Timestamp? ?? data['createdAt'] as Timestamp?,//
+
     );
   }
 
   Future<String> _generateUniqueGroupCode() async {
     for (var attempt = 0; attempt < 20; attempt++) {
-      final code = _randomGroupCode();
+      final code = _randomGroupCode();//Sinh mã ngẫu nhiên
+      //Kiểm tra mã này đã tồn tại trong Database chưa
       final existingGroup = await _firestore.collection('groups').where('groupCode', isEqualTo: code).limit(1).get();
       if (existingGroup.docs.isEmpty) return code;
     }
